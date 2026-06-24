@@ -1,5 +1,10 @@
 require('dotenv').config();
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Same fix as db/queries.js — keep timestamptz as raw string, not a JS Date,
+// to avoid losing microsecond precision that the keyset cursor depends on.
+types.setTypeParser(1184, (val) => val);
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const PAGE_SIZE = 50;
@@ -13,7 +18,6 @@ async function getSnapshotCount() {
 async function paginateAll() {
   const seenIds = new Set();
   let cursor = null;
-  let pageNum = 0;
 
   while (true) {
     const values = [];
@@ -31,10 +35,6 @@ async function paginateAll() {
       LIMIT $${values.length}
     `;
     const { rows } = await pool.query(sql, values);
-
-    pageNum++;
-    console.log(`page ${pageNum}: got ${rows.length} rows, cursor sent =`, cursor);
-
     if (rows.length === 0) break;
 
     for (const row of rows) {
@@ -43,13 +43,8 @@ async function paginateAll() {
     }
 
     cursor = { createdAt: rows[rows.length - 1].created_at, id: rows[rows.length - 1].id };
-
-    if (rows.length < PAGE_SIZE) {
-      console.log(`STOPPING: page ${pageNum} returned ${rows.length} < PAGE_SIZE (${PAGE_SIZE})`);
-      break;
-    }
-
     await new Promise((r) => setTimeout(r, 20));
+    if (rows.length < PAGE_SIZE) break;
   }
 
   return seenIds;
