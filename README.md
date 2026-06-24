@@ -48,6 +48,20 @@ never re-included.
 Returns `{ data: [...], next_cursor: <string|null> }`. next_cursor is null once the
 last page is reached.
 
+## Frontend
+A production-style React dashboard now lives in [`frontend/`](frontend).
+
+Run it with:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+By default it talks to `http://localhost:3000`. Set `VITE_API_BASE_URL` if your
+backend is running somewhere else.
+
 ## What I'd improve with more time
 - Use COPY instead of multi-row INSERT for even faster seeding at larger scale.
 - Add stricter cursor validation (verify decoded createdAt is a real date).
